@@ -365,17 +365,87 @@ NOTE: 修正や動作確認の途中でも、必要ならcommitしておきな�
 .修正したメソッド
 [source, Java]
 ----
-// Parser.java <1>
-  private Stmt declaration() { // <2>
-    try {
-      if (match(VAR)) return varDeclaration();  // <3>
-
-      return statement();
-    } catch (ParseError error) {
-      synchronize();
-      return null;
+// Scanner.java <1>
+  private void scanToken() {
+        char c = advance();
+        switch (c) {
+            case '(': addToken(LEFT_PAREN); break;
+            case ')': addToken(RIGHT_PAREN); break;
+            case '{': addToken(LEFT_BRACE); break;
+            case '}': addToken(RIGHT_BRACE); break;
+            case ',': addToken(COMMA); break;
+            case '.': addToken(DOT); break;
+            case '-': addToken(MINUS); break;
+            case '+': addToken(PLUS); break;
+            case ';': addToken(SEMICOLON); break;
+            case '*': addToken(STAR); break; 
+            case '!':
+                /*
+                if(match('=')){
+                    addToken(BANG_EQUAL);
+                }else{
+                    addToken(BANG);
+                }
+                */
+                addToken(match('=') ? BANG_EQUAL : BANG);
+                break;
+            case '=':
+                addToken(match('=') ? EQUAL_EQUAL : EQUAL);
+                break;
+            case '<':
+                addToken(match('=') ? LESS_EQUAL : LESS);
+                break;
+            case '>':
+                addToken(match('=') ? GREATER_EQUAL : GREATER);
+                break;
+            case '/':
+                if (match('/')) {
+                    while (peek() != '\n' && !isAtEnd()) advance();
+                } else {
+                    addToken(SLASH);
+                }
+                break;
+            case ' ':
+            case '\r':
+            case '\t':
+                // Ignore whitespace.
+                break;
+            case '\n':
+                line++;
+                break;
+            case '"': 
+                string(); 
+                break;    
+            case '\'': string(); break;// 追加ーーーーーーーーーーーーーーーーー
+            default:
+                if (isDigit(c)) {
+                    number();
+                } else if (isAlpha(c)) {
+                    identifier();
+                }else {
+                    Lox.error(line, "Unexpected character.");
+                }
+                break;
+        }
     }
-  }
+
+    private void string() {
+        char a = source.charAt(start);　//追加　ーーーーーーーー
+        while (peek() != a && !isAtEnd()) {//追加　ーーーーーーーー
+            if (peek() == '\n') line++;
+            advance();
+        }
+
+        if (isAtEnd()) {
+            Lox.error(line, "Unterminated string.");
+            return;
+        }
+
+        advance();
+
+        String value = source.substring(start + 1, current - 1);
+        addToken(STRING, value);
+    }
 ----
 <1> 修正したファイル名をここに書く。
 <2> 修正したメソッドの先頭から末尾までを抽出する。
@@ -389,7 +459,7 @@ NOTE: 修正や動作確認の途中でも、必要ならcommitしておきな�
 
 .`lox_s` のLoxインタプリタを実行したときのスナップショット
 --
-image::lox_s_snap.jpg[]
+image::lox_s_snap.png[]
 --
 
 IMPORTANT: 問6の回答に手を付けたなら、commitしておきなさい（後でやったり、修正した場合も同様）。 +
